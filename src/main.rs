@@ -240,17 +240,12 @@ fn read_string(it: &mut Peekable<Chars>) -> Result<Token, ParsingError> {
 fn read_numeric(curr: &char, it: &mut Peekable<Chars>) -> Result<Token, ParsingError> {
     let mut buffer = String::new();
     buffer.push(*curr);
-    loop {
-        if it.peek().is_none() {
-            return Err(ParsingError::new("Failed to close numeric.".into()));
-        }
-        let chr = *it.peek().unwrap();
-        if chr.is_digit(10) || chr == '.' {
-            buffer.push(chr);
-            let _ = it.next();
-        } else {
-            break;
-        }
+    while it
+        .peek()
+        .ok_or_else(|| ParsingError::new("Failed to close numeric.".into()))
+        .is_ok_and(|&x| x.is_digit(10) || x == '.')
+    {
+        buffer.push(it.next().unwrap());
     }
     Ok(Token::NumLit(buffer))
 }
