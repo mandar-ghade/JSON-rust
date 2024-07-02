@@ -201,24 +201,23 @@ fn read_boolean_or_null(
     it: &mut Peekable<Chars>,
 ) -> Result<Option<Token>, ParsingError> {
     let mut buffer = String::from(*curr);
-    let mut bool_token: Option<Token> = None;
-    loop {
-        let Some(&p) = it.peek() else {
-            return Err(ParsingError::new("Failed to identify boolean.".into()));
-        };
-        if p == ',' || p == ']' || p == '}' {
-            if buffer == "true" || buffer == "false" || buffer == "null" {
-                bool_token = Some(Token::StrLit(buffer));
-            }
-            break;
+    while it
+        .peek()
+        .ok_or_else(|| ParsingError::new("Failed to identify boolean".into()))
+        .is_ok_and(|&x| !(x == ',' || x == ']' || x == '}'))
+    {
+        let next = it.next().unwrap();
+        if next.is_whitespace() {
+            continue;
         }
-        if p.is_whitespace() {
-            let _ = it.next();
-        } else {
-            buffer.push(it.next().unwrap());
-        }
+        buffer.push(next);
     }
-    Ok(bool_token)
+    match buffer.as_ref() {
+        "true" | "false" | "null" => Ok(Some(Token::StrLit(buffer))),
+        _ => Err(ParsingError::new(
+            "Boolean or null could not be fetched (Json schema invalid)".into(),
+        )),
+    }
 }
 
 fn read_string(it: &mut Peekable<Chars>) -> Result<Token, ParsingError> {
