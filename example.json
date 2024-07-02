@@ -1,0 +1,78 @@
+{
+  "name": "Alice",
+  "age": 25,
+  "contact": {
+    "email": "alice@example.com",
+    "phone": "+1-202-555-0123",
+    "address": {
+      "city": "Wonderland",
+      "country": "Fictional World",
+      "coordinates": {
+        "latitude": 51.5074,
+        "longitude": -0.1278
+      }
+    },
+    "social": {
+      "twitter": "@alice",
+      "linkedin": "alice"
+    }
+  },
+  "preferences": {
+    "colors": [
+      "red",
+      "green",
+      "blue",
+      {
+        "shades": [
+          "dark",
+          "light",
+          {
+            "mixed": ["purple", "orange", {"vivid": ["yellow", "cyan"]}]
+          }
+        ]
+      }
+    ],
+    "notifications": {
+      "email": true,
+      "sms": false,
+      "channels": [
+        {
+          "name": "channel1",
+          "enabled": true,
+          "details": [
+            {"key": "key1", "value": "value1"},
+            {"key": "key2", "value": "value2"}
+          ]
+        },
+        {
+          "name": "channel2",
+          "enabled": false,
+          "details": [
+            {"key": "key3", "value": "value3"},
+            {"key": "key4", "value": "value4"}
+          ]
+        }
+      ]
+    }
+  },
+  "nested_arrays": [
+    [
+      [
+        [
+          [
+            [
+              [
+                {
+                  "array_in_object": [
+                    {"key": "value"},
+                    {"nested_array_in_object": [[{"deeply_nested": "value"}]]}
+                  ]
+                }
+              ]
+            ]
+          ]
+        ]
+      ]
+    ]
+  ]
+}
