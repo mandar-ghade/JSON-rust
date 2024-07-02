@@ -222,17 +222,19 @@ fn read_boolean_or_null(
 
 fn read_string(it: &mut Peekable<Chars>) -> Result<Token, ParsingError> {
     let mut buffer = String::new();
-    loop {
-        if it.peek().is_none() {
-            return Err(ParsingError::new("Failed to close string literal.".into()));
-        }
-        let chr = it.next().unwrap();
-        if chr == '"' {
-            break;
-        }
-        buffer.push(chr);
+    while it
+        .peek()
+        .ok_or_else(|| ParsingError::new("Failed to close string literal.".into()))
+        .is_ok_and(|&x| x != '"')
+    {
+        buffer.push(it.next().unwrap())
     }
-    Ok(Token::StrLit(buffer))
+    match it.next() {
+        Some('"') => Ok(Token::StrLit(buffer)),
+        _ => Err(ParsingError::new(
+            "Failed to close string literal. Closing quotation mark not found.".into(),
+        )),
+    }
 }
 
 fn read_numeric(curr: &char, it: &mut Peekable<Chars>) -> Result<Token, ParsingError> {
@@ -404,6 +406,7 @@ fn parse_object(it: &mut Peekable<Iter<Token>>) -> Result<Json, ParsingError> {
 
 fn parse(string: &String) -> Result<Json, ParsingError> {
     let tokens = tokenize(string)?;
+    dbg!(&tokens);
     let json_object = parse_object(&mut tokens.iter().peekable())?;
     Ok(json_object)
 }
