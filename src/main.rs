@@ -39,6 +39,38 @@ lazy_static! {
     };
 }
 
+struct Tokens<T: Iterator<Item = char>> {
+    data: Peekable<T>,
+}
+
+impl<T: std::iter::Iterator<Item = char>> Iterator for Tokens<T> {
+    type Item = Token;
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut next: char = self.data.next()?;
+        while next.is_whitespace() {
+            next = self.data.next()?;
+        }
+        if let Some(token_match) = SINGLE_CHAR_TOKENS.get(&next) {
+            return Some(token_match.clone());
+        } else if next == '"' {
+            return read_string(&mut self.data).ok();
+        } else if next.is_digit(10) || next == '.' || next == '-' {
+            return read_numeric(&next, &mut self.data).ok();
+        } else if next == 't' || next == 'f' || next == 'n' {
+            return read_boolean_or_null(&next, &mut self.data).ok()?;
+        }
+        return None;
+    }
+}
+
+impl<T: std::iter::Iterator<Item = char>> From<T> for Tokens<T> {
+    fn from(it: T) -> Self {
+        Tokens {
+            data: it.peekable(),
+        }
+    }
+}
+
 #[derive(Debug)]
 struct LookupError {
     msg: String,
@@ -196,9 +228,9 @@ impl fmt::Debug for Json {
     }
 }
 
-fn read_boolean_or_null(
+fn read_boolean_or_null<T: Iterator<Item = char>>(
     curr: &char,
-    it: &mut Peekable<Chars>,
+    it: &mut Peekable<T>,
 ) -> Result<Option<Token>, ParsingError> {
     let mut buffer = String::from(*curr);
     while it
@@ -207,10 +239,9 @@ fn read_boolean_or_null(
         .is_ok_and(|&x| !(x == ',' || x == ']' || x == '}'))
     {
         let next = it.next().unwrap();
-        if next.is_whitespace() {
-            continue;
+        if !next.is_whitespace() {
+            buffer.push(next);
         }
-        buffer.push(next);
     }
     match buffer.as_ref() {
         "true" | "false" | "null" => Ok(Some(Token::StrLit(buffer))),
@@ -220,7 +251,7 @@ fn read_boolean_or_null(
     }
 }
 
-fn read_string(it: &mut Peekable<Chars>) -> Result<Token, ParsingError> {
+fn read_string<T: Iterator<Item = char>>(it: &mut Peekable<T>) -> Result<Token, ParsingError> {
     let mut buffer = String::new();
     while it
         .peek()
@@ -237,7 +268,10 @@ fn read_string(it: &mut Peekable<Chars>) -> Result<Token, ParsingError> {
     }
 }
 
-fn read_numeric(curr: &char, it: &mut Peekable<Chars>) -> Result<Token, ParsingError> {
+fn read_numeric<T: Iterator<Item = char>>(
+    curr: &char,
+    it: &mut Peekable<T>,
+) -> Result<Token, ParsingError> {
     let mut buffer = String::new();
     buffer.push(*curr);
     while it
@@ -347,7 +381,7 @@ fn parse_object(it: &mut Peekable<Iter<Token>>) -> Result<Json, ParsingError> {
                 };
                 if !is_kv_pair {
                     return Err(ParsingError::new(format!(
-                        "Json object delimiter not found. Token: {:?}",
+                        "Json object delimiter not found. (Pair not recognized) Token: {:?}",
                         it.peek()
                     )));
                 }
@@ -365,7 +399,7 @@ fn parse_object(it: &mut Peekable<Iter<Token>>) -> Result<Json, ParsingError> {
                         Token::Lbracket => parse_array(it)?,
                         _ => {
                             return Err(ParsingError::new(format!(
-                                "Json value not parsable. Key: {}",
+                                "Json value not parsable where key: {}",
                                 key
                             )))
                         }
@@ -411,8 +445,13 @@ fn main() {
     let mut json_str = String::new();
     file.read_to_string(&mut json_str)
         .expect("Cannot read contents of file to string.");
-    let object = parse(&json_str);
-    dbg!(&object);
+    //let object = parse(&json_str);
+    //dbg!(&object);
+    let iter = json_str.chars().into_iter();
+    let tokens = Tokens::from(iter);
+    for tk in tokens {
+        dbg!(&tk);
+    }
     /* Example lookup:
     if let Ok(object) = parse(&json_str) {
         let res = object
